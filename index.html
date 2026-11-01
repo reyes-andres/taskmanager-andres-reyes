@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskManager - Andrés Reyes</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/app.js" defer></script>
+</head>
+
+<body>
+    <!-- Encabezado -->
+    <header>
+        <h1>TaskManager</h1>
+        <p>Gestor de tareas con JavaScript y localStorage</p>
+    </header>
+
+    <!-- Aviso en pantalla (errores de red, mensajes de éxito) -->
+    <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
+
+    <main>
+        <!-- Panel de métricas -->
+        <section id="dashboard">
+            <div class="tarjeta">
+                <h3>Total</h3>
+                <p id="total">0</p>
+            </div>
+            <div class="tarjeta pendientes">
+                <h3>Pendientes</h3>
+                <p id="pendientes">0</p>
+            </div>
+            <div class="tarjeta completadas">
+                <h3>Completadas</h3>
+                <p id="completadas">0</p>
+            </div>
+        </section>
+
+        <!-- Formulario para crear y editar tareas -->
+        <section id="seccion-formulario">
+            <h2 id="titulo-formulario">Nueva tarea</h2>
+            <form id="formulario" novalidate>
+                <div class="campo campo-titulo">
+                    <label for="titulo">Título</label>
+                    <input type="text" id="titulo" placeholder="Ej. Revisar cámaras del local"
+                        aria-describedby="error-titulo">
+                    <p id="error-titulo" class="error"></p>
+                </div>
+                <div class="campo">
+                    <label for="prioridad">Prioridad</label>
+                    <select id="prioridad" aria-describedby="error-prioridad">
+                        <option value="">Selecciona</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Media">Media</option>
+                        <option value="Baja">Baja</option>
+                    </select>
+                    <p id="error-prioridad" class="error"></p>
+                </div>
+                <div class="botones-formulario">
+                    <button type="submit" id="guardar">Agregar</button>
+                    <button type="button" id="cancelar" hidden>Cancelar</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Búsqueda, filtros y orden -->
+        <section id="controles">
+            <input type="text" id="buscador" placeholder="Buscar por título..." aria-label="Buscar por título">
+            <div class="filtros">
+                <button type="button" class="btn-filtro activo" data-filtro="todas">Todas</button>
+                <button type="button" class="btn-filtro" data-filtro="pendientes">Pendientes</button>
+                <button type="button" class="btn-filtro" data-filtro="completadas">Completadas</button>
+            </div>
+            <select id="orden" aria-label="Ordenar tareas">
+                <option value="recientes">Más recientes</option>
+                <option value="antiguas">Más antiguas</option>
+                <option value="prioridad">Prioridad (Alta a Baja)</option>
+            </select>
+        </section>
+
+        <!-- Lista de tareas -->
+        <section id="seccion-lista">
+            <h2>Mis tareas</h2>
+            <ul id="lista-tareas"></ul>
+            <p id="estado" class="estado">No hay tareas para mostrar.</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>Andrés Reyes Silva - Programación de Sistemas Web - ECOTEC 2026</p>
+    </footer>
+</body>
+
+</html>
