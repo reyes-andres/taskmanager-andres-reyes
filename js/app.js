@@ -13,9 +13,18 @@ const cancelar = document.getElementById('cancelar');
 const listaTareas = document.getElementById('lista-tareas');
 const estado = document.getElementById('estado');
 const aviso = document.getElementById('aviso');
+const buscador = document.getElementById('buscador');
+const orden = document.getElementById('orden');
+const botonesFiltro = document.querySelectorAll('.btn-filtro');
+const total = document.getElementById('total');
+const pendientes = document.getElementById('pendientes');
+const completadas = document.getElementById('completadas');
 
 // Arreglo donde se guardan las tareas (let porque va a cambiar)
 let tareas = [];
+
+// Filtro elegido: todas, pendientes o completadas
+let filtroActual = 'todas';
 
 // Id de la tarea que se está editando (null = ninguna)
 let idEditando = null;
@@ -95,7 +104,38 @@ async function cargarDesdeAPI() {
 // Guardar las tareas en el navegador
 function guardarTareas() {
     localStorage.setItem('tareas', JSON.stringify(tareas));
+
+    // Cada vez que se guarda, se avisa que hubo un cambio
+    notificarCambio();
 }
+
+// ----- Evento personalizado (CustomEvent) -----
+
+// Lanzar el evento 'tareasActualizadas' con la lista de tareas
+function notificarCambio() {
+    const evento = new CustomEvent('tareasActualizadas', {
+        detail: { tareas: tareas }
+    });
+
+    document.dispatchEvent(evento);
+}
+
+// Calcular y mostrar los números del dashboard
+function actualizarDashboard(lista) {
+    const listaCompletadas = lista.filter(function (tarea) {
+        return tarea.completada;
+    });
+
+    total.textContent = lista.length;
+    completadas.textContent = listaCompletadas.length;
+    pendientes.textContent = lista.length - listaCompletadas.length;
+}
+
+// El dashboard escucha el evento y se actualiza solo
+document.addEventListener('tareasActualizadas', function (evento) {
+    console.log('Evento tareasActualizadas recibido');
+    actualizarDashboard(evento.detail.tareas);
+});
 
 // Leer las tareas guardadas en el navegador
 function cargarTareas() {
@@ -229,22 +269,68 @@ function eliminarTarea(id) {
     mostrarTareas();
 }
 
+// ----- Filtros, búsqueda y orden -----
+
+// Devolver las tareas que se deben ver en la lista
+function obtenerTareasVisibles() {
+    const texto = buscador.value.trim().toLowerCase();
+
+    // 1. Filtrar por estado
+    let resultado = tareas.filter(function (tarea) {
+        if (filtroActual === 'pendientes') {
+            return !tarea.completada;
+        }
+        if (filtroActual === 'completadas') {
+            return tarea.completada;
+        }
+        return true;
+    });
+
+    // 2. Buscar por título
+    resultado = resultado.filter(function (tarea) {
+        return tarea.titulo.toLowerCase().includes(texto);
+    });
+
+    // 3. Ordenar por fecha o por prioridad
+    const valorPrioridad = { Alta: 1, Media: 2, Baja: 3 };
+
+    resultado.sort(function (a, b) {
+        if (orden.value === 'antiguas') {
+            return a.fecha - b.fecha;
+        }
+        if (orden.value === 'prioridad') {
+            return valorPrioridad[a.prioridad] - valorPrioridad[b.prioridad];
+        }
+        return b.fecha - a.fecha;
+    });
+
+    return resultado;
+}
+
 // ----- Mostrar en la página -----
 
 // Dibujar la lista de tareas en la página
 function mostrarTareas() {
     listaTareas.innerHTML = '';
 
-    // Si no hay tareas, mostrar el mensaje
+    const visibles = obtenerTareasVisibles();
+
+    // Si no hay tareas, mostrar un mensaje
     if (tareas.length === 0) {
         estado.textContent = 'No hay tareas para mostrar.';
         estado.hidden = false;
         return;
     }
 
+    if (visibles.length === 0) {
+        estado.textContent = 'Ninguna tarea coincide con la búsqueda o el filtro.';
+        estado.hidden = false;
+        return;
+    }
+
     estado.hidden = true;
 
-    tareas.forEach(function (tarea) {
+    visibles.forEach(function (tarea) {
         const li = document.createElement('li');
         li.classList.add('tarea');
 
@@ -313,6 +399,29 @@ cancelar.addEventListener('click', function () {
     limpiarFormulario();
 });
 
+// Búsqueda en tiempo real mientras se escribe
+buscador.addEventListener('input', function () {
+    mostrarTareas();
+});
+
+// Cambiar el orden de la lista
+orden.addEventListener('change', function () {
+    mostrarTareas();
+});
+
+// Botones de filtro: Todas, Pendientes, Completadas
+botonesFiltro.forEach(function (boton) {
+    boton.addEventListener('click', function () {
+        botonesFiltro.forEach(function (b) {
+            b.classList.remove('activo');
+        });
+
+        boton.classList.add('activo');
+        filtroActual = boton.dataset.filtro;
+        mostrarTareas();
+    });
+});
+
 // Al cargar la página
 if (localStorage.getItem('tareas') === null) {
     // Primera vez: no hay nada guardado, traer de la API
@@ -321,4 +430,5 @@ if (localStorage.getItem('tareas') === null) {
     // Ya hay datos: usar los de localStorage (funciona sin internet)
     cargarTareas();
     mostrarTareas();
+    notificarCambio();
 }
