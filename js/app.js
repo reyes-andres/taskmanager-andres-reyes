@@ -3,6 +3,7 @@
 
 // Elementos del HTML (DOM)
 const formulario = document.getElementById('formulario');
+const tituloFormulario = document.getElementById('titulo-formulario');
 const titulo = document.getElementById('titulo');
 const prioridad = document.getElementById('prioridad');
 const errorTitulo = document.getElementById('error-titulo');
@@ -15,6 +16,27 @@ const aviso = document.getElementById('aviso');
 
 // Arreglo donde se guardan las tareas (let porque va a cambiar)
 let tareas = [];
+
+// Id de la tarea que se está editando (null = ninguna)
+let idEditando = null;
+
+// ----- localStorage -----
+
+// Guardar las tareas en el navegador
+function guardarTareas() {
+    localStorage.setItem('tareas', JSON.stringify(tareas));
+}
+
+// Leer las tareas guardadas en el navegador
+function cargarTareas() {
+    const datos = localStorage.getItem('tareas');
+
+    if (datos !== null) {
+        tareas = JSON.parse(datos);
+    }
+}
+
+// ----- Formulario -----
 
 // Revisar que los campos no estén vacíos
 function validarFormulario() {
@@ -48,6 +70,22 @@ function validarFormulario() {
     return mensajeTitulo === '' && mensajePrioridad === '';
 }
 
+// Dejar el formulario como al inicio
+function limpiarFormulario() {
+    formulario.reset();
+    errorTitulo.textContent = '';
+    errorPrioridad.textContent = '';
+    titulo.classList.remove('invalido');
+    prioridad.classList.remove('invalido');
+
+    idEditando = null;
+    tituloFormulario.textContent = 'Nueva tarea';
+    guardar.textContent = 'Agregar';
+    cancelar.hidden = true;
+}
+
+// ----- CRUD -----
+
 // Crear una tarea nueva y agregarla al arreglo
 function agregarTarea() {
     const nuevaTarea = {
@@ -59,6 +97,34 @@ function agregarTarea() {
     };
 
     tareas.push(nuevaTarea);
+    guardarTareas();
+}
+
+// Pasar los datos de una tarea al formulario para editarla
+function prepararEdicion(id) {
+    const tarea = tareas.find(function (t) {
+        return t.id === id;
+    });
+
+    idEditando = id;
+    titulo.value = tarea.titulo;
+    prioridad.value = tarea.prioridad;
+
+    tituloFormulario.textContent = 'Editar tarea';
+    guardar.textContent = 'Guardar cambios';
+    cancelar.hidden = false;
+    titulo.focus();
+}
+
+// Guardar los cambios de la tarea que se está editando
+function editarTarea() {
+    const tarea = tareas.find(function (t) {
+        return t.id === idEditando;
+    });
+
+    tarea.titulo = titulo.value.trim();
+    tarea.prioridad = prioridad.value;
+    guardarTareas();
 }
 
 // Marcar o desmarcar una tarea como completada
@@ -68,6 +134,7 @@ function cambiarEstado(id) {
     });
 
     tarea.completada = !tarea.completada;
+    guardarTareas();
     mostrarTareas();
 }
 
@@ -83,8 +150,16 @@ function eliminarTarea(id) {
         return tarea.id !== id;
     });
 
+    // Si se estaba editando esa tarea, limpiar el formulario
+    if (id === idEditando) {
+        limpiarFormulario();
+    }
+
+    guardarTareas();
     mostrarTareas();
 }
+
+// ----- Mostrar en la página -----
 
 // Dibujar la lista de tareas en la página
 function mostrarTareas() {
@@ -116,6 +191,7 @@ function mostrarTareas() {
         <small>Creada: ${fecha}</small>
       </div>
       <span class="etiqueta ${tarea.prioridad.toLowerCase()}">${tarea.prioridad}</span>
+      <button type="button" class="btn-editar">Editar</button>
       <button type="button" class="btn-eliminar">Eliminar</button>
     `;
 
@@ -129,6 +205,10 @@ function mostrarTareas() {
             cambiarEstado(tarea.id);
         });
 
+        li.querySelector('.btn-editar').addEventListener('click', function () {
+            prepararEdicion(tarea.id);
+        });
+
         li.querySelector('.btn-eliminar').addEventListener('click', function () {
             eliminarTarea(tarea.id);
         });
@@ -137,7 +217,9 @@ function mostrarTareas() {
     });
 }
 
-// Evento del formulario: agregar tarea
+// ----- Eventos -----
+
+// Evento del formulario: agregar o editar
 formulario.addEventListener('submit', function (evento) {
     evento.preventDefault();
 
@@ -145,11 +227,22 @@ formulario.addEventListener('submit', function (evento) {
         return;
     }
 
-    agregarTarea();
-    formulario.reset();
+    if (idEditando === null) {
+        agregarTarea();
+    } else {
+        editarTarea();
+    }
+
+    limpiarFormulario();
     mostrarTareas();
     titulo.focus();
 });
 
-// Mostrar la lista al cargar la página
+// Botón cancelar: salir del modo edición
+cancelar.addEventListener('click', function () {
+    limpiarFormulario();
+});
+
+// Al cargar la página: leer localStorage y mostrar
+cargarTareas();
 mostrarTareas();
