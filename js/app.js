@@ -20,6 +20,76 @@ let tareas = [];
 // Id de la tarea que se está editando (null = ninguna)
 let idEditando = null;
 
+// Dirección de la API (solo 10 tareas)
+const URL_API = 'https://jsonplaceholder.typicode.com/todos?_limit=10';
+
+// Para controlar el tiempo del aviso
+let temporizador;
+
+// ----- Avisos -----
+
+// Mostrar un aviso en pantalla por unos segundos
+function mostrarAviso(mensaje, tipo) {
+    aviso.textContent = mensaje;
+    aviso.className = 'aviso ' + tipo;
+    aviso.hidden = false;
+
+    clearTimeout(temporizador);
+    temporizador = setTimeout(function () {
+        aviso.hidden = true;
+    }, 4000);
+}
+
+// ----- API -----
+
+// Traer tareas de la API cuando no hay nada guardado
+async function cargarDesdeAPI() {
+    estado.textContent = 'Cargando tareas desde la API...';
+    estado.hidden = false;
+
+    try {
+        const respuesta = await fetch(URL_API);
+
+        // Si el servidor responde con error (404, 500...)
+        if (!respuesta.ok) {
+            throw new Error('Error del servidor: ' + respuesta.status);
+        }
+
+        const datos = await respuesta.json();
+        const prioridades = ['Alta', 'Media', 'Baja'];
+
+        // Pasar los datos de la API a nuestro formato
+        const tareasAPI = datos.map(function (item, indice) {
+            return {
+                id: item.id,
+                titulo: item.title,
+                prioridad: prioridades[indice % 3],
+                completada: item.completed,
+                fecha: Date.now() - indice * 60000
+            };
+        });
+
+        // Agregar solo las que no existan, para no duplicar
+        tareasAPI.forEach(function (tareaAPI) {
+            const existe = tareas.some(function (t) {
+                return t.id === tareaAPI.id;
+            });
+
+            if (!existe) {
+                tareas.push(tareaAPI);
+            }
+        });
+
+        guardarTareas();
+        mostrarAviso('Se importaron ' + tareasAPI.length + ' tareas desde la API.', 'exito');
+    } catch (error) {
+        console.error(error);
+        mostrarAviso('No se pudo conectar con la API. Revisa tu conexión a internet.', 'fallo');
+    }
+
+    mostrarTareas();
+}
+
 // ----- localStorage -----
 
 // Guardar las tareas en el navegador
@@ -243,6 +313,12 @@ cancelar.addEventListener('click', function () {
     limpiarFormulario();
 });
 
-// Al cargar la página: leer localStorage y mostrar
-cargarTareas();
-mostrarTareas();
+// Al cargar la página
+if (localStorage.getItem('tareas') === null) {
+    // Primera vez: no hay nada guardado, traer de la API
+    cargarDesdeAPI();
+} else {
+    // Ya hay datos: usar los de localStorage (funciona sin internet)
+    cargarTareas();
+    mostrarTareas();
+}
